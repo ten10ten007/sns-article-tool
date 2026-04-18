@@ -654,6 +654,30 @@
       border-radius: var(--radius-sm);
       border: 1px solid rgba(74,222,128,0.3);
     }
+    .video-status {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 1.7;
+      min-height: 20px;
+    }
+    .progress-wrap {
+      background: rgba(255,255,255,0.06);
+      border-radius: 20px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-inner {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #ec4899);
+      border-radius: 20px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    @keyframes progress-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
     .tab-row {
       display: flex;
       gap: 8px;
@@ -748,13 +772,12 @@
     <video id="previewVideo" controls preload="metadata"></video>
     <div class="video-controls">
       <div class="video-hint">
-        ▶ 動画を再生して好きなシーンで一時停止してください<br>
-        <strong>⏸ 一時停止した瞬間のフレームを記事生成に使用します</strong>
+        🎬 動画を確認したら、下の「記事を生成する」をクリック<br>
+        <strong>AIが動画全体を自動でアップロード・解析して記事を生成します</strong>
       </div>
-      <button class="capture-btn" id="captureBtn" onclick="captureFrame()">📸 このフレームを使って記事を生成する準備</button>
-      <div class="captured-frame-wrap" id="capturedFrameWrap">
-        <div class="frame-label">✅ キャプチャ済み（このフレームで記事を生成します）</div>
-        <canvas id="capturedCanvas"></canvas>
+      <div class="video-status" id="videoStatus">✅ 動画を選択しました。「記事を生成する」をクリックしてください。</div>
+      <div class="progress-wrap" id="progressWrap" style="display:none;">
+        <div class="progress-inner" id="progressInner"></div>
       </div>
     </div>
   </div>
@@ -906,6 +929,9 @@
   let uploadedImageBase64 = null;
   let uploadedMimeType = null;
   let currentTab = 'image';
+  let uploadedVideoFileUri = null;
+  let videoFile = null;
+  let videoFileMimeType = null;
 
   // Tab switching
   function switchTab(tab) {
@@ -927,14 +953,15 @@
   }
 
   function resetVideo() {
+    uploadedVideoFileUri = null;
+    videoFile = null;
+    videoFileMimeType = null;
     document.getElementById('videoPreviewContainer').style.display = 'none';
-    document.getElementById('capturedFrameWrap').style.display = 'none';
     document.getElementById('previewVideo').src = '';
     document.getElementById('fileInputVideo').value = '';
-    if (currentTab === 'image') {
-      uploadedImageBase64 = null;
-      uploadedMimeType = null;
-    }
+    document.getElementById('videoStatus').textContent = '';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('progressInner').style.width = '0%';
   }
 
   // Image upload
@@ -992,32 +1019,92 @@
   });
 
   function processVideo(file) {
+    videoFile = file;
+    videoFileMimeType = file.type || 'video/mp4';
+    uploadedVideoFileUri = null;
     const url = URL.createObjectURL(file);
     previewVideo.src = url;
     uploadAreaVideo.style.display = 'none';
     videoPreviewContainer.style.display = 'block';
-    document.getElementById('capturedFrameWrap').style.display = 'none';
-    uploadedImageBase64 = null; // reset until captured
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    document.getElementById('videoStatus').textContent =
+      `✅ 「${file.name}」(${sizeMB}MB) を選択しました。「記事を生成する」をクリックしてください。`;
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('progressInner').style.width = '0%';
   }
 
-  function captureFrame() {
-    if (!previewVideo.src || previewVideo.readyState === 0) {
-      showError('⚠️ 動画を読み込んでください。');
-      return;
+  async function uploadVideoToGemini(apiKey, onStatus) {
+    if (!videoFile) throw new Error('動画ファイルが選択されていません');
+
+    onStatus('📤 動画をGemini AIにアップロード中...');
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('progressInner').style.width = '10%';
+
+    // Step 1: Start resumable upload session
+    const startRes = await fetch(
+      `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': String(videoFile.size),
+          'X-Goog-Upload-Header-Content-Type': videoFileMimeType,
+        },
+        body: JSON.stringify({ file: { display_name: videoFile.name } })
+      }
+    );
+    if (!startRes.ok) {
+      const err = await startRes.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'アップロードセッションの開始に失敗しました');
     }
-    const canvas = document.getElementById('capturedCanvas');
-    canvas.width = previewVideo.videoWidth;
-    canvas.height = previewVideo.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
-    const dataURL = canvas.toDataURL('image/jpeg', 0.92);
-    uploadedImageBase64 = dataURL.split(',')[1];
-    uploadedMimeType = 'image/jpeg';
-    document.getElementById('capturedFrameWrap').style.display = 'block';
-    document.getElementById('captureBtn').textContent = '✅ フレームをキャプチャしました（再選択で変更可）';
-    document.getElementById('captureBtn').style.background = 'linear-gradient(135deg, rgba(74,222,128,0.15), rgba(74,222,128,0.1))';
-    document.getElementById('captureBtn').style.borderColor = 'rgba(74,222,128,0.4)';
-    document.getElementById('captureBtn').style.color = 'var(--success)';
+    const uploadUrl = startRes.headers.get('X-Goog-Upload-URL');
+    if (!uploadUrl) throw new Error('アップロードURLが取得できませんでした');
+
+    document.getElementById('progressInner').style.width = '30%';
+
+    // Step 2: Upload file bytes
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Length': String(videoFile.size),
+        'X-Goog-Upload-Offset': '0',
+        'X-Goog-Upload-Command': 'upload, finalize',
+      },
+      body: videoFile
+    });
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json().catch(() => ({}));
+      throw new Error(err?.error?.message || 'ファイルのアップロードに失敗しました');
+    }
+    const fileData = await uploadRes.json();
+    const fileName = fileData.file?.name;
+    const fileUri  = fileData.file?.uri;
+    if (!fileName || !fileUri) throw new Error('ファイル情報の取得に失敗しました');
+
+    document.getElementById('progressInner').style.width = '60%';
+    onStatus('⚙️ AIが動画を解析中です... しばらくお待ちください');
+
+    // Step 3: Poll until ACTIVE
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const stRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`
+      );
+      if (!stRes.ok) continue;
+      const st = await stRes.json();
+      if (st.state === 'ACTIVE') {
+        document.getElementById('progressInner').style.width = '100%';
+        return fileUri;
+      }
+      if (st.state === 'FAILED') {
+        throw new Error('動画の処理に失敗しました。別の形式（MP4推奨）でお試しください。');
+      }
+      const pct = Math.min(60 + i * 1.5, 95);
+      document.getElementById('progressInner').style.width = pct + '%';
+    }
+    throw new Error('動画の処理がタイムアウトしました（動画が長すぎる可能性があります）');
   }
 
   function processFile(file) {
@@ -1083,17 +1170,28 @@
     // Validation
     errorBox.style.display = 'none';
     if (!apiKey) { showError('⚠️ APIキーを入力してください。Google AI Studio（無料）で取得できます。'); return; }
-    if (!uploadedImageBase64) { showError('⚠️ 画像をアップロードしてください。'); return; }
+    if (currentTab === 'image' && !uploadedImageBase64) { showError('⚠️ 画像をアップロードしてください。'); return; }
+    if (currentTab === 'video' && !videoFile) { showError('⚠️ 動画を選択してください。'); return; }
     if (selectedPlatforms.size === 0) { showError('⚠️ SNSを1つ以上選択してください。'); return; }
 
     // Loading state
     generateBtn.disabled = true;
     spinner.style.display = 'block';
-    btnText.textContent = '生成中...';
+    btnText.textContent = '準備中...';
     resultsSection.style.display = 'none';
     resultsContainer.innerHTML = '';
 
     try {
+      // Upload video if needed
+      if (currentTab === 'video') {
+        uploadedVideoFileUri = await uploadVideoToGemini(apiKey, (msg) => {
+          btnText.textContent = msg;
+          document.getElementById('videoStatus').textContent = msg;
+        });
+        document.getElementById('videoStatus').textContent = '✅ 解析完了！記事を生成中...';
+        btnText.textContent = '✨ 記事を生成中...';
+      }
+
       // Build prompts for each platform
       const platformList = Array.from(selectedPlatforms);
       const platformPrompts = platformList.map(p => {
@@ -1102,13 +1200,18 @@
       }).join('');
 
       const contextPart = context ? `\n\n【補足情報】\n${context}` : '';
+      const mediaLabel = currentTab === 'video' ? '動画' : '画像';
 
-      const fullPrompt = `以下の画像を分析して、各SNSプラットフォームに最適化された日本語の投稿文を作成してください。${contextPart}
+      const fullPrompt = `以下の${mediaLabel}を分析して、各SNSプラットフォームに最適化された日本語の投稿文を作成してください。${contextPart}
 
 各プラットフォームの条件に従って、それぞれ独立した投稿文を作成してください。
 出力形式：各プラットフォームの区切りは「--- プラットフォーム名 ---」で囲み、その直下に投稿文のみを記載してください。${platformPrompts}
 
 重要：必ず日本語で作成し、各プラットフォームに合わせた文体・文字数を守ってください。`;
+
+      const mediaPart = uploadedVideoFileUri
+        ? { file_data: { mime_type: videoFileMimeType, file_uri: uploadedVideoFileUri } }
+        : { inline_data: { mime_type: uploadedMimeType, data: uploadedImageBase64 } };
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -1117,15 +1220,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
-              parts: [
-                {
-                  inline_data: {
-                    mime_type: uploadedMimeType,
-                    data: uploadedImageBase64
-                  }
-                },
-                { text: fullPrompt }
-              ]
+              parts: [ mediaPart, { text: fullPrompt } ]
             }],
             generationConfig: {
               temperature: 0.8,
@@ -1167,6 +1262,7 @@
       generateBtn.disabled = false;
       spinner.style.display = 'none';
       btnText.textContent = '✨　記事を生成する';
+      document.getElementById('progressWrap').style.display = 'none';
     }
   });
 
