@@ -429,6 +429,46 @@
 
     footer { text-align: center; padding: 0 0 40px; font-size: 12px; color: var(--text-muted); }
     footer strong { color: var(--text-sub); }
+    /* ── Guided Form ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 580px) { .form-row { grid-template-columns: 1fr; } }
+    .form-field { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; color: var(--text-muted); }
+    .form-select, .form-text {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'Noto Sans JP', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .form-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a7da0' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .form-select option { background: #1e2d4a; color: var(--text); }
+    .form-select:focus, .form-text:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(96,165,250,0.12); }
+    .form-text::placeholder { color: var(--text-muted); }
+    .mood-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 640px) { .mood-grid { grid-template-columns: repeat(2, 1fr); } }
+    .mood-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 12px; font-weight: 600; color: var(--text-sub);
+      user-select: none;
+      line-height: 1.3;
+    }
+    .mood-item:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .mood-item input[type="checkbox"] { display: none; }
+    .mood-item.checked { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .form-section-gap { margin-top: 18px; }
+
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.2); border-radius: 3px; }
@@ -542,10 +582,69 @@
     </div>
   </div>
 
-  <!-- Context -->
+  <!-- Guided Context Form -->
   <div class="card">
-    <div class="card-label"><span class="card-label-icon">💬</span>補足情報（任意）</div>
-    <textarea id="contextInput" class="context-textarea" placeholder="例：ホテルのラウンジで撮影した夕暮れの写真です。リゾート感を出したいです。ターゲットは30代女性。"></textarea>
+    <div class="card-label"><span class="card-label-icon">💬</span>コンテンツ情報（答えるほど記事の精度UP）</div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <div class="form-label">📂 ジャンル</div>
+        <select id="genreSelect" class="form-select">
+          <option value="">選択してください</option>
+          <option value="ホテル・旅館">🏨 ホテル・旅館</option>
+          <option value="飲食・カフェ・レストラン">🍽️ 飲食・カフェ</option>
+          <option value="美容・エステ・ネイルサロン">💆 美容・サロン</option>
+          <option value="劇団・舞台・エンタメ">🎭 劇団・エンタメ</option>
+          <option value="写真・映像・クリエイター">📸 写真・映像</option>
+          <option value="観光・旅行・観光スポット">🌿 観光・旅行</option>
+          <option value="スポーツ・フィットネス・ジム">🏋️ スポーツ</option>
+          <option value="ショップ・小売・EC">🛍️ ショップ</option>
+          <option value="音楽・アート・イベント">🎵 音楽・アート</option>
+          <option value="教育・スクール・習い事">📚 教育</option>
+          <option value="医療・健康・ウェルネス">🏥 医療・健康</option>
+          <option value="その他">・・・ その他</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">📍 場所・店名・施設名</div>
+        <input type="text" id="placeNameInput" class="form-text" placeholder="例：草津温泉 ○○旅館">
+      </div>
+    </div>
+
+    <div class="form-field form-section-gap">
+      <div class="form-label">🎨 雰囲気・テイスト（複数選択OK）</div>
+      <div class="mood-grid" id="moodGrid">
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="高級感・洗練">✨ 高級感・洗練</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="カジュアル・気軽">😊 カジュアル</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="癒し・リラックス">🌿 癒し系</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="活発・エネルギッシュ">⚡ 元気・活発</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="ポップ・かわいい">🌸 ポップ・可愛い</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="ナチュラル・温かみ">🍂 ナチュラル</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="スタイリッシュ・クール">🖤 クール</label>
+        <label class="mood-item" onclick="toggleMood(this)"><input type="checkbox" class="mood-check" value="季節感・旬を大切に">🌸 季節感</label>
+      </div>
+    </div>
+
+    <div class="form-row form-section-gap">
+      <div class="form-field">
+        <div class="form-label">👥 メインターゲット</div>
+        <select id="targetSelect" class="form-select">
+          <option value="">選択してください</option>
+          <option value="10〜20代（Z世代）">10〜20代（Z世代）</option>
+          <option value="20〜30代女性">20〜30代女性</option>
+          <option value="20〜30代男性">20〜30代男性</option>
+          <option value="30〜40代ファミリー">30〜40代ファミリー</option>
+          <option value="40〜50代（ミドル層）">40〜50代</option>
+          <option value="60代以上（シニア層）">60代以上（シニア）</option>
+          <option value="カップル・夫婦">カップル・夫婦</option>
+          <option value="外国人観光客">外国人観光客（インバウンド）</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <div class="form-label">💡 特に伝えたいこと（任意）</div>
+        <input type="text" id="keyMessageInput" class="form-text" placeholder="例：期間限定メニュー・夏フェアのPR">
+      </div>
+    </div>
   </div>
 
   <div class="error-box" id="errorBox"></div>
@@ -794,6 +893,27 @@
     document.getElementById('selectAllBtn').textContent = selectedPlatforms.size === 5 ? 'すべて解除' : 'すべて選択';
   }
 
+  function toggleMood(label) {
+    const cb = label.querySelector('input');
+    cb.checked = !cb.checked;
+    label.classList.toggle('checked', cb.checked);
+  }
+
+  function buildContext() {
+    const genre   = document.getElementById('genreSelect').value;
+    const place   = document.getElementById('placeNameInput').value.trim();
+    const moods   = Array.from(document.querySelectorAll('.mood-check:checked')).map(c => c.value);
+    const target  = document.getElementById('targetSelect').value;
+    const message = document.getElementById('keyMessageInput').value.trim();
+    const parts = [];
+    if (genre)          parts.push(`ジャンル：${genre}`);
+    if (place)          parts.push(`場所・名称：${place}`);
+    if (moods.length>0) parts.push(`雰囲気・テイスト：${moods.join('、')}`);
+    if (target)         parts.push(`メインターゲット：${target}`);
+    if (message)        parts.push(`特に伝えたいこと：${message}`);
+    return parts.join('\n');
+  }
+
   // ── 生成 ─────────────────────────────────────────
   const generateBtn = document.getElementById('generateBtn');
   const spinner = document.getElementById('spinner');
@@ -801,7 +921,7 @@
   const errorBox = document.getElementById('errorBox');
 
   generateBtn.addEventListener('click', async () => {
-    const context = document.getElementById('contextInput').value.trim();
+    const context = buildContext();
     errorBox.style.display = 'none';
     if (!CONFIG.GEMINI_API_KEY || CONFIG.GEMINI_API_KEY === 'YOUR_API_KEY_HERE') { showError('⚠️ APIキーが設定されていません。管理者にお問い合わせください。'); return; }
     if (currentTab === 'image' && !uploadedImageBase64) { showError('⚠️ 画像をアップロードしてください。'); return; }
