@@ -583,6 +583,104 @@
     ::-webkit-scrollbar-track { background: var(--bg-primary); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+    /* Video Preview */
+    .video-preview-container {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+    #previewVideo {
+      width: 100%;
+      max-height: 320px;
+      border-radius: var(--radius-sm);
+      background: #000;
+      display: block;
+      cursor: pointer;
+    }
+    .video-controls {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .video-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    .video-hint strong { color: var(--text-secondary); }
+    .capture-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(124,111,247,0.2), rgba(236,72,153,0.15));
+      border: 1px solid rgba(124,111,247,0.4);
+      border-radius: var(--radius-sm);
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Noto Sans JP', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      letter-spacing: 0.5px;
+    }
+    .capture-btn:hover {
+      background: linear-gradient(135deg, rgba(124,111,247,0.35), rgba(236,72,153,0.25));
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .captured-frame-wrap {
+      display: none;
+      margin-top: 12px;
+    }
+    .captured-frame-wrap .frame-label {
+      font-size: 12px;
+      color: var(--success);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #capturedCanvas {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(74,222,128,0.3);
+    }
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Noto Sans JP', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .tab-btn.active {
+      background: rgba(124,111,247,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .tab-btn:hover:not(.active) {
+      border-color: var(--border-active);
+      color: var(--text-primary);
+    }
   </style>
 </head>
 <body>
@@ -591,7 +689,7 @@
   <header>
     <div class="logo-badge">AI SNS Creator</div>
     <h1>SNS 記事作成 AI ツール</h1>
-    <p class="subtitle">画像をアップロードするだけで<br>5つのSNSに最適化された日本語記事を自動生成</p>
+    <p class="subtitle">画像・動画をアップロードするだけで<br>5つのSNSに最適化された日本語記事を自動生成</p>
   </header>
 
   <!-- API Key -->
@@ -610,7 +708,13 @@
     </div>
   </div>
 
-  <!-- Upload -->
+  <!-- Upload tabs -->
+  <div class="tab-row">
+    <button class="tab-btn active" id="tabImage" onclick="switchTab('image')">🖼️ 画像をアップロード</button>
+    <button class="tab-btn" id="tabVideo" onclick="switchTab('video')">🎬 動画をアップロード</button>
+  </div>
+
+  <!-- Upload (Image) -->
   <div class="upload-area" id="uploadArea">
     <span class="upload-icon">🖼️</span>
     <div class="upload-title">画像をドラッグ＆ドロップ</div>
@@ -618,13 +722,41 @@
     <input type="file" id="fileInput" accept="image/*">
   </div>
 
-  <!-- Preview -->
+  <!-- Upload (Video) -->
+  <div class="upload-area" id="uploadAreaVideo" style="display:none;">
+    <span class="upload-icon">🎬</span>
+    <div class="upload-title">動画をドラッグ＆ドロップ</div>
+    <div class="upload-sub">または クリックしてファイルを選択<br>MP4 / MOV / AVI / WEBM 対応</div>
+    <input type="file" id="fileInputVideo" accept="video/*">
+  </div>
+
+  <!-- Preview (Image) -->
   <div class="preview-container" id="previewContainer">
     <div class="preview-header">
       <span class="preview-label">📎 アップロード画像</span>
       <button class="change-btn" id="changeBtn">変更する</button>
     </div>
     <img id="previewImg" src="" alt="プレビュー">
+  </div>
+
+  <!-- Preview (Video) -->
+  <div class="video-preview-container" id="videoPreviewContainer">
+    <div class="preview-header">
+      <span class="preview-label">🎬 アップロード動画</span>
+      <button class="change-btn" id="changeBtnVideo">変更する</button>
+    </div>
+    <video id="previewVideo" controls preload="metadata"></video>
+    <div class="video-controls">
+      <div class="video-hint">
+        ▶ 動画を再生して好きなシーンで一時停止してください<br>
+        <strong>⏸ 一時停止した瞬間のフレームを記事生成に使用します</strong>
+      </div>
+      <button class="capture-btn" id="captureBtn" onclick="captureFrame()">📸 このフレームを使って記事を生成する準備</button>
+      <div class="captured-frame-wrap" id="capturedFrameWrap">
+        <div class="frame-label">✅ キャプチャ済み（このフレームで記事を生成します）</div>
+        <canvas id="capturedCanvas"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- Platform Selection -->
@@ -773,8 +905,39 @@
   let selectedPlatforms = new Set(['instagram','tiktok','facebook','twitter','threads']);
   let uploadedImageBase64 = null;
   let uploadedMimeType = null;
+  let currentTab = 'image';
 
-  // Upload area
+  // Tab switching
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabImage').classList.toggle('active', tab === 'image');
+    document.getElementById('tabVideo').classList.toggle('active', tab === 'video');
+    // Reset both
+    resetImage();
+    resetVideo();
+    document.getElementById('uploadArea').style.display = tab === 'image' ? 'block' : 'none';
+    document.getElementById('uploadAreaVideo').style.display = tab === 'video' ? 'block' : 'none';
+  }
+
+  function resetImage() {
+    uploadedImageBase64 = null;
+    uploadedMimeType = null;
+    document.getElementById('previewContainer').style.display = 'none';
+    document.getElementById('fileInput').value = '';
+  }
+
+  function resetVideo() {
+    document.getElementById('videoPreviewContainer').style.display = 'none';
+    document.getElementById('capturedFrameWrap').style.display = 'none';
+    document.getElementById('previewVideo').src = '';
+    document.getElementById('fileInputVideo').value = '';
+    if (currentTab === 'image') {
+      uploadedImageBase64 = null;
+      uploadedMimeType = null;
+    }
+  }
+
+  // Image upload
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('fileInput');
   const previewContainer = document.getElementById('previewContainer');
@@ -797,12 +960,65 @@
     if (e.target.files[0]) processFile(e.target.files[0]);
   });
   changeBtn.addEventListener('click', () => {
-    uploadedImageBase64 = null;
-    uploadedMimeType = null;
-    previewContainer.style.display = 'none';
+    resetImage();
     uploadArea.style.display = 'block';
-    fileInput.value = '';
   });
+
+  // Video upload
+  const uploadAreaVideo = document.getElementById('uploadAreaVideo');
+  const fileInputVideo = document.getElementById('fileInputVideo');
+  const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+  const previewVideo = document.getElementById('previewVideo');
+  const changeBtnVideo = document.getElementById('changeBtnVideo');
+
+  uploadAreaVideo.addEventListener('click', () => fileInputVideo.click());
+  uploadAreaVideo.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadAreaVideo.classList.add('dragover');
+  });
+  uploadAreaVideo.addEventListener('dragleave', () => uploadAreaVideo.classList.remove('dragover'));
+  uploadAreaVideo.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadAreaVideo.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) processVideo(file);
+  });
+  fileInputVideo.addEventListener('change', e => {
+    if (e.target.files[0]) processVideo(e.target.files[0]);
+  });
+  changeBtnVideo.addEventListener('click', () => {
+    resetVideo();
+    uploadAreaVideo.style.display = 'block';
+  });
+
+  function processVideo(file) {
+    const url = URL.createObjectURL(file);
+    previewVideo.src = url;
+    uploadAreaVideo.style.display = 'none';
+    videoPreviewContainer.style.display = 'block';
+    document.getElementById('capturedFrameWrap').style.display = 'none';
+    uploadedImageBase64 = null; // reset until captured
+  }
+
+  function captureFrame() {
+    if (!previewVideo.src || previewVideo.readyState === 0) {
+      showError('⚠️ 動画を読み込んでください。');
+      return;
+    }
+    const canvas = document.getElementById('capturedCanvas');
+    canvas.width = previewVideo.videoWidth;
+    canvas.height = previewVideo.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+    uploadedImageBase64 = dataURL.split(',')[1];
+    uploadedMimeType = 'image/jpeg';
+    document.getElementById('capturedFrameWrap').style.display = 'block';
+    document.getElementById('captureBtn').textContent = '✅ フレームをキャプチャしました（再選択で変更可）';
+    document.getElementById('captureBtn').style.background = 'linear-gradient(135deg, rgba(74,222,128,0.15), rgba(74,222,128,0.1))';
+    document.getElementById('captureBtn').style.borderColor = 'rgba(74,222,128,0.4)';
+    document.getElementById('captureBtn').style.color = 'var(--success)';
+  }
 
   function processFile(file) {
     const reader = new FileReader();
