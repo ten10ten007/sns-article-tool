@@ -9,8 +9,13 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ===================================================
+       ★ 設定エリア（ここだけ変更すればOK）
+       ACCESS_CODE : アクセスコード（販売先に教えるパスワード）
+       GEMINI_API_KEY : Google AI StudioのAPIキー
+    =================================================== */
+
     :root {
-      --white: #ffffff;
       --bg: #162035;
       --surface: #1e2d4a;
       --border: #2c4068;
@@ -27,7 +32,6 @@
       --error-text: #fca5a5;
       --radius: 20px;
       --radius-sm: 12px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
       --shadow: 0 4px 20px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
       --shadow-lg: 0 20px 60px rgba(56,189,248,0.15), 0 8px 24px rgba(0,0,0,0.2);
     }
@@ -40,652 +44,396 @@
       overflow-x: hidden;
     }
 
-    /* ── Animated Background ── */
+    /* Background */
     .bg-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
+      position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
     }
     .bg-canvas::before {
-      content: '';
-      position: absolute;
-      width: 800px; height: 800px;
+      content: ''; position: absolute; width: 800px; height: 800px;
       background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, transparent 70%);
       top: -300px; left: -200px;
       animation: drift 12s ease-in-out infinite alternate;
     }
     .bg-canvas::after {
-      content: '';
-      position: absolute;
-      width: 600px; height: 600px;
+      content: ''; position: absolute; width: 600px; height: 600px;
       background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
       bottom: -200px; right: -100px;
       animation: drift 15s ease-in-out infinite alternate-reverse;
     }
     .bg-blob {
-      position: absolute;
-      width: 400px; height: 400px;
+      position: absolute; width: 400px; height: 400px;
       background: radial-gradient(circle, rgba(96,165,250,0.1) 0%, transparent 70%);
       top: 40%; left: 60%;
       animation: drift 18s ease-in-out infinite alternate;
     }
     @keyframes drift {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(40px, 30px) scale(1.08); }
+      0% { transform: translate(0,0) scale(1); }
+      100% { transform: translate(40px,30px) scale(1.08); }
     }
 
-    /* ── Top accent bar ── */
+    /* Top bar */
     .top-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #7c3aed, #db2777, #f59e0b, #7c3aed);
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #1d4ed8, #38bdf8, #60a5fa, #1d4ed8);
       background-size: 200% 100%;
       animation: shimmer-bar 4s linear infinite;
       z-index: 100;
     }
-    @keyframes shimmer-bar {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 200% 50%; }
-    }
+    @keyframes shimmer-bar { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
-    /* ── Layout ── */
-    .container {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 0 20px 80px;
-      position: relative;
-      z-index: 1;
+    /* ===================================================
+       LOGIN SCREEN
+    =================================================== */
+    #loginScreen {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      background: var(--bg);
+      transition: opacity 0.5s ease, visibility 0.5s ease;
     }
-
-    /* ── Header ── */
-    header {
+    #loginScreen.hidden {
+      opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
       text-align: center;
-      padding: 72px 0 48px;
+      box-shadow: var(--shadow-lg);
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.9) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .login-logo {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 24px rgba(59,130,246,0.4);
+    }
+    .login-title {
+      font-size: 24px; font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .login-sub {
+      font-size: 13px; color: var(--text-muted);
+      line-height: 1.7; margin-bottom: 32px;
+    }
+    .login-input-wrap { position: relative; margin-bottom: 16px; }
+    .login-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 44px 14px 16px;
+      color: var(--text);
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 3px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
+    }
+    .login-input::placeholder { letter-spacing: 1px; color: var(--text-muted); }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 18px;
+      color: var(--text-muted); padding: 4px;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6, #38bdf8);
+      border: none; border-radius: var(--radius-sm);
+      color: white; font-size: 16px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+      position: relative; overflow: hidden;
+    }
+    .login-btn::before {
+      content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.4s ease;
+    }
+    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(59,130,246,0.5); }
+    .login-btn:hover::before { left: 100%; }
+    .login-btn:active { transform: translateY(0); }
+    .login-error {
+      display: none;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: var(--error-text);
+      font-size: 13px; font-weight: 600;
+      margin-top: 14px;
+    }
+    .login-footer {
+      margin-top: 24px; font-size: 11px; color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .shake {
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+
+    /* ===================================================
+       MAIN TOOL
+    =================================================== */
+    #mainApp {
+      opacity: 0; transition: opacity 0.6s ease;
+    }
+    #mainApp.visible { opacity: 1; }
+
+    .container {
+      max-width: 780px; margin: 0 auto; padding: 0 20px 80px;
+      position: relative; z-index: 1;
+    }
+
+    /* Header */
+    header { text-align: center; padding: 72px 0 48px; }
     .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      display: inline-flex; align-items: center; gap: 6px;
       background: linear-gradient(135deg, rgba(96,165,250,0.15), rgba(56,189,248,0.1));
       border: 1px solid rgba(96,165,250,0.3);
-      border-radius: 50px;
-      padding: 6px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 24px;
+      border-radius: 50px; padding: 6px 16px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--primary); margin-bottom: 24px;
     }
     .badge-dot {
       width: 6px; height: 6px;
       background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border-radius: 50%;
-      animation: ping 2s ease-in-out infinite;
+      border-radius: 50%; animation: ping 2s ease-in-out infinite;
     }
     @keyframes ping {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.4); opacity: 0.6; }
     }
-    h1 {
-      font-size: clamp(32px, 6vw, 56px);
-      font-weight: 800;
-      letter-spacing: -1px;
-      line-height: 1.15;
-      margin-bottom: 16px;
-    }
+    h1 { font-size: clamp(32px, 6vw, 56px); font-weight: 800; letter-spacing: -1px; line-height: 1.15; margin-bottom: 16px; }
     .h1-plain { color: var(--text); }
     .h1-grad {
       background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 50%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .subtitle {
-      font-size: 16px;
-      color: var(--text-sub);
-      font-weight: 400;
-      line-height: 1.8;
-    }
+    .subtitle { font-size: 16px; color: var(--text-sub); font-weight: 400; line-height: 1.8; }
 
-    /* ── Cards ── */
+    /* Cards */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
-      transition: box-shadow 0.25s ease;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; margin-bottom: 20px;
+      box-shadow: var(--shadow); transition: box-shadow 0.25s ease;
     }
-    .card:focus-within {
-      box-shadow: var(--shadow-lg);
-      border-color: #ddd6fe;
-    }
+    .card:focus-within { box-shadow: var(--shadow-lg); border-color: rgba(96,165,250,0.3); }
     .card-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-sub);
-      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-sub); margin-bottom: 16px;
     }
     .card-label-icon {
-      width: 28px; height: 28px;
-      border-radius: 8px;
+      width: 28px; height: 28px; border-radius: 8px;
       background: var(--primary-light);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
     }
 
-    /* ── API Input ── */
-    .api-input-wrap {
-      position: relative;
-    }
-    .api-input {
-      width: 100%;
-      background: rgba(255,255,255,0.05);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px 48px 14px 16px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: 'Courier New', monospace;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .api-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-    }
-    .api-hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 10px;
-    }
-    .api-hint a {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .api-hint a:hover { text-decoration: underline; }
-
-    /* ── Tab Switch ── */
+    /* Tabs */
     .tab-wrap {
-      display: flex;
-      background: rgba(0,0,0,0.25);
-      border-radius: 14px;
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 20px;
+      display: flex; background: rgba(0,0,0,0.25); border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 20px;
     }
     .tab-btn {
-      flex: 1;
-      padding: 12px 16px;
-      border: none;
-      border-radius: 10px;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      flex: 1; padding: 12px 16px; border: none; border-radius: 10px;
+      background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s ease;
     }
-    .tab-btn.active {
-      background: rgba(124,58,237,0.3);
-      color: #c4b5fd;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
+    .tab-btn.active { background: rgba(96,165,250,0.2); color: #93c5fd; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
     .tab-btn:hover:not(.active) { color: var(--primary); }
 
-    /* ── Upload Area ── */
+    /* Upload */
     .upload-area {
-      border: 2px dashed #2c4a72;
-      border-radius: var(--radius);
-      padding: 52px 24px;
-      text-align: center;
-      cursor: pointer;
+      border: 2px dashed #2c4a72; border-radius: var(--radius);
+      padding: 52px 24px; text-align: center; cursor: pointer;
       transition: all 0.25s ease;
       background: linear-gradient(135deg, #182640, #1a2d4e);
-      position: relative;
-      overflow: hidden;
-      margin-bottom: 20px;
+      position: relative; overflow: hidden; margin-bottom: 0;
     }
     .upload-area::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(124,58,237,0.04), rgba(219,39,119,0.04));
-      opacity: 0;
-      transition: opacity 0.25s;
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(96,165,250,0.06), rgba(56,189,248,0.04));
+      opacity: 0; transition: opacity 0.25s;
     }
-    .upload-area:hover, .upload-area.dragover {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(124,58,237,0.08);
-    }
+    .upload-area:hover, .upload-area.dragover { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(96,165,250,0.1); }
     .upload-area:hover::before, .upload-area.dragover::before { opacity: 1; }
-    .upload-emoji {
-      font-size: 52px;
-      margin-bottom: 14px;
-      display: block;
-      animation: floaty 3s ease-in-out infinite;
-    }
-    @keyframes floaty {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    .upload-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .upload-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
+    .upload-emoji { font-size: 52px; margin-bottom: 14px; display: block; animation: floaty 3s ease-in-out infinite; }
+    @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    .upload-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .upload-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
     .upload-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--primary-light);
-      color: var(--primary);
-      border-radius: 50px;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      margin-top: 14px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--primary-light); color: var(--primary);
+      border-radius: 50px; padding: 6px 14px; font-size: 12px; font-weight: 700; margin-top: 14px;
     }
     #fileInput, #fileInputVideo { display: none; }
 
-    /* ── Preview ── */
+    /* Preview */
     .preview-card {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
+      display: none; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 0; box-shadow: var(--shadow);
     }
     .preview-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.04);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.04);
     }
-    .preview-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-sub);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .preview-label { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
     .change-btn {
-      font-size: 12px;
-      color: var(--primary);
-      background: var(--primary-light);
-      border: none;
-      border-radius: 8px;
-      padding: 5px 12px;
-      cursor: pointer;
-      font-weight: 700;
-      font-family: inherit;
-      transition: background 0.2s;
+      font-size: 12px; color: var(--primary); background: var(--primary-light);
+      border: none; border-radius: 8px; padding: 5px 12px;
+      cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.2s;
     }
-    .change-btn:hover { background: #ddd6fe; }
-    #previewImg {
-      width: 100%;
-      max-height: 360px;
-      object-fit: contain;
-      background: #f9f9f9;
-      display: block;
-    }
-    #previewVideo {
-      width: 100%;
-      max-height: 320px;
-      background: #000;
-      display: block;
-    }
+    .change-btn:hover { background: rgba(96,165,250,0.25); }
+    #previewImg { width: 100%; max-height: 360px; object-fit: contain; background: rgba(0,0,0,0.3); display: block; }
+    #previewVideo { width: 100%; max-height: 320px; background: #000; display: block; }
     .video-status-bar {
-      padding: 14px 18px;
-      font-size: 13px;
-      color: var(--text-sub);
-      background: rgba(255,255,255,0.03);
-      border-top: 1px solid var(--border);
+      padding: 14px 18px; font-size: 13px; color: var(--text-sub);
+      background: rgba(255,255,255,0.03); border-top: 1px solid var(--border);
     }
-    .progress-wrap {
-      height: 4px;
-      background: #ede9fe;
-      margin: 0 18px 14px;
-      border-radius: 10px;
-      overflow: hidden;
-      display: none;
-    }
-    .progress-inner {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 10px;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
+    .progress-wrap { height: 4px; background: rgba(96,165,250,0.15); margin: 0 18px 14px; border-radius: 10px; overflow: hidden; display: none; }
+    .progress-inner { height: 100%; background: linear-gradient(90deg, #1d4ed8, #38bdf8); border-radius: 10px; width: 0%; transition: width 0.4s ease; }
 
-    /* ── Platform Grid ── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-sub);
-    }
-    .select-all-btn {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--primary);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 0;
-    }
+    /* Platforms */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-sub); }
+    .select-all-btn { font-size: 12px; font-weight: 600; color: var(--primary); background: none; border: none; cursor: pointer; font-family: inherit; }
     .select-all-btn:hover { text-decoration: underline; }
-
-    .platforms-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    @media (max-width: 580px) {
-      .platforms-grid { grid-template-columns: repeat(3, 1fr); }
-    }
+    .platforms-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 0; }
+    @media (max-width: 580px) { .platforms-grid { grid-template-columns: repeat(3, 1fr); } }
     .platform-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 18px 8px 14px;
-      background: rgba(255,255,255,0.04);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 18px 8px 14px; background: rgba(255,255,255,0.04);
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden;
     }
-    .platform-btn:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow);
-    }
-    .platform-btn.active {
-      border-color: var(--p-color, var(--primary));
-      background: var(--p-bg, var(--primary-light));
-      box-shadow: 0 4px 14px var(--p-shadow, rgba(124,58,237,0.2));
-    }
+    .platform-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .platform-btn.active { border-color: var(--p-color, var(--primary)); background: var(--p-bg, var(--primary-light)); box-shadow: 0 4px 14px var(--p-shadow, rgba(96,165,250,0.2)); }
     .platform-btn.active::after {
-      content: '✓';
-      position: absolute;
-      top: 5px; right: 7px;
-      font-size: 9px;
-      font-weight: 900;
-      color: var(--white);
-      background: var(--p-color, var(--primary));
-      border-radius: 50%;
-      width: 14px; height: 14px;
-      display: flex; align-items: center; justify-content: center;
+      content: '✓'; position: absolute; top: 5px; right: 7px;
+      font-size: 9px; font-weight: 900; color: #fff;
+      background: var(--p-color, var(--primary)); border-radius: 50%;
+      width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
     }
-    .p-icon {
-      width: 42px; height: 42px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-    }
-    .p-name {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--text-sub);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
+    .p-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .p-name { font-size: 10px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; text-transform: uppercase; }
     .platform-btn.active .p-name { color: var(--p-color, var(--primary)); }
-
-    /* Platform brand styles */
-    .platform-btn[data-platform="instagram"] {
-      --p-color: #f472b6; --p-bg: rgba(244,114,182,0.12); --p-shadow: rgba(193,53,132,0.25);
-    }
-    .platform-btn[data-platform="instagram"] .p-icon {
-      background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-    }
-    .platform-btn[data-platform="tiktok"] {
-      --p-color: #ff6b8a; --p-bg: rgba(255,0,80,0.12); --p-shadow: rgba(255,0,80,0.2);
-    }
+    .platform-btn[data-platform="instagram"] { --p-color: #f472b6; --p-bg: rgba(244,114,182,0.12); --p-shadow: rgba(193,53,132,0.25); }
+    .platform-btn[data-platform="instagram"] .p-icon { background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+    .platform-btn[data-platform="tiktok"] { --p-color: #ff6b8a; --p-bg: rgba(255,0,80,0.12); --p-shadow: rgba(255,0,80,0.2); }
     .platform-btn[data-platform="tiktok"] .p-icon { background: #010101; }
-    .platform-btn[data-platform="facebook"] {
-      --p-color: #60a5fa; --p-bg: rgba(24,119,242,0.12); --p-shadow: rgba(24,119,242,0.2);
-    }
+    .platform-btn[data-platform="facebook"] { --p-color: #60a5fa; --p-bg: rgba(24,119,242,0.12); --p-shadow: rgba(24,119,242,0.2); }
     .platform-btn[data-platform="facebook"] .p-icon { background: #1877F2; }
-    .platform-btn[data-platform="twitter"] {
-      --p-color: #e2e8f0; --p-bg: rgba(255,255,255,0.08); --p-shadow: rgba(255,255,255,0.1);
-    }
+    .platform-btn[data-platform="twitter"] { --p-color: #e2e8f0; --p-bg: rgba(255,255,255,0.08); --p-shadow: rgba(255,255,255,0.1); }
     .platform-btn[data-platform="twitter"] .p-icon { background: #000000; }
-    .platform-btn[data-platform="threads"] {
-      --p-color: #cbd5e1; --p-bg: rgba(255,255,255,0.07); --p-shadow: rgba(255,255,255,0.08);
-    }
+    .platform-btn[data-platform="threads"] { --p-color: #cbd5e1; --p-bg: rgba(255,255,255,0.07); --p-shadow: rgba(255,255,255,0.08); }
     .platform-btn[data-platform="threads"] .p-icon { background: #101010; }
 
-    /* ── Context Textarea ── */
+    /* Context */
     .context-textarea {
-      width: 100%;
-      background: rgba(255,255,255,0.05);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: 'Noto Sans JP', sans-serif;
-      line-height: 1.8;
-      resize: vertical;
-      min-height: 96px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 16px; color: var(--text);
+      font-size: 14px; font-family: 'Noto Sans JP', sans-serif; line-height: 1.8;
+      resize: vertical; min-height: 96px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .context-textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-    }
+    .context-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(96,165,250,0.12); }
     .context-textarea::placeholder { color: var(--text-muted); }
 
-    /* ── Error ── */
+    /* Error */
     .error-box {
-      display: none;
-      background: var(--error-bg);
-      border: 1px solid var(--error-border);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      color: var(--error-text);
-      font-size: 13px;
-      margin-bottom: 16px;
-      font-weight: 500;
+      display: none; background: var(--error-bg); border: 1px solid var(--error-border);
+      border-radius: var(--radius-sm); padding: 14px 18px; color: var(--error-text);
+      font-size: 13px; margin-bottom: 16px; font-weight: 500;
     }
 
-    /* ── Generate Button ── */
+    /* Generate Button */
     .generate-btn {
-      width: 100%;
-      padding: 20px;
+      width: 100%; padding: 20px;
       background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 40%, #38bdf8 100%);
-      border: none;
-      border-radius: var(--radius);
-      color: white;
-      font-size: 17px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      position: relative;
-      overflow: hidden;
-      margin-bottom: 48px;
-      letter-spacing: 0.3px;
+      border: none; border-radius: var(--radius); color: white;
+      font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer;
+      transition: all 0.25s ease; position: relative; overflow: hidden;
+      margin-bottom: 48px; letter-spacing: 0.3px;
       box-shadow: 0 8px 32px rgba(59,130,246,0.4);
     }
     .generate-btn::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%;
-      width: 100%; height: 100%;
+      content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
       transition: left 0.5s ease;
     }
     .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(59,130,246,0.5); }
     .generate-btn:hover::before { left: 100%; }
     .generate-btn:active { transform: translateY(0); }
-    .generate-btn:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: 0 4px 16px rgba(124,58,237,0.2);
-    }
-    .btn-inner {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-    }
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2.5px solid rgba(255,255,255,0.35);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: none;
-    }
+    .generate-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; box-shadow: 0 4px 16px rgba(59,130,246,0.2); }
+    .btn-inner { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.35); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Results ── */
+    /* Results */
     .results-section { display: none; }
-    .results-heading {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .results-heading span {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, #7c3aed, #db2777);
-      border-radius: 10px;
-      font-size: 16px;
-    }
-    .result-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 16px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-    }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .results-heading { font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+    .results-heading span { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: linear-gradient(135deg, #1d4ed8, #38bdf8); border-radius: 10px; font-size: 16px; }
+    .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); animation: slideUp 0.4s cubic-bezier(0.4,0,0.2,1) both; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     .result-card:nth-child(1) { animation-delay: 0.04s; }
     .result-card:nth-child(2) { animation-delay: 0.08s; }
     .result-card:nth-child(3) { animation-delay: 0.12s; }
     .result-card:nth-child(4) { animation-delay: 0.16s; }
     .result-card:nth-child(5) { animation-delay: 0.20s; }
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.03);
-    }
-    .result-platform-info {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .result-icon {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 17px;
-    }
-    .result-platform-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .result-meta {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .char-badge {
-      font-size: 11px;
-      color: var(--text-muted);
-      background: rgba(255,255,255,0.08);
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-    .copy-btn {
-      display: flex; align-items: center; gap: 5px;
-      padding: 7px 14px;
-      background: var(--primary-light);
-      border: 1.5px solid #ddd6fe;
-      border-radius: 9px;
-      color: var(--primary);
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-    .copy-btn:hover { background: #ddd6fe; transform: translateY(-1px); }
-    .copy-btn.copied {
-      background: #d1fae5;
-      border-color: #a7f3d0;
-      color: var(--success);
-    }
+    .result-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.03); }
+    .result-platform-info { display: flex; align-items: center; gap: 10px; }
+    .result-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .result-platform-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .result-meta { display: flex; align-items: center; gap: 10px; }
+    .char-badge { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .copy-btn { display: flex; align-items: center; gap: 5px; padding: 7px 14px; background: var(--primary-light); border: 1.5px solid rgba(96,165,250,0.3); border-radius: 9px; color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+    .copy-btn:hover { background: rgba(96,165,250,0.25); transform: translateY(-1px); }
+    .copy-btn.copied { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: var(--success); }
     .result-body { padding: 20px 22px; }
-    .result-text {
-      font-size: 14px;
-      line-height: 2;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-all;
-      font-family: 'Noto Sans JP', sans-serif;
-    }
+    .result-text { font-size: 14px; line-height: 2; color: var(--text); white-space: pre-wrap; word-break: break-all; font-family: 'Noto Sans JP', sans-serif; }
     .hashtag { color: var(--primary); font-weight: 600; }
 
-    /* ── Footer ── */
-    footer {
-      text-align: center;
-      padding: 0 0 40px;
-      font-size: 12px;
-      color: var(--text-muted);
+    /* Logout btn */
+    .logout-btn {
+      position: fixed; bottom: 20px; right: 20px; z-index: 50;
+      background: rgba(30,45,74,0.9); border: 1px solid var(--border);
+      border-radius: 50px; padding: 8px 16px;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; backdrop-filter: blur(10px);
+      transition: all 0.2s; display: none;
     }
-    footer strong { color: var(--text-sub); }
+    .logout-btn:hover { color: var(--text); border-color: var(--primary); }
 
-    /* ── Scrollbar ── */
+    footer { text-align: center; padding: 0 0 40px; font-size: 12px; color: var(--text-muted); }
+    footer strong { color: var(--text-sub); }
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.2); border-radius: 3px; }
+
+    .media-wrap { display: flex; flex-direction: column; gap: 16px; }
   </style>
 </head>
 <body>
@@ -693,14 +441,44 @@
 <div class="top-bar"></div>
 <div class="bg-canvas"><div class="bg-blob"></div></div>
 
+<!-- ===================================================
+     LOGIN SCREEN
+=================================================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">✨</div>
+    <div class="login-title">SNS AI クリエイター</div>
+    <p class="login-sub">アクセスコードを入力してください</p>
+
+    <div class="login-input-wrap">
+      <input type="password" id="accessCodeInput" class="login-input"
+             placeholder="●●●●●●" maxlength="20"
+             onkeydown="if(event.key==='Enter') checkAccess()">
+      <button class="eye-btn" onclick="toggleEye()" id="eyeBtn">👁</button>
+    </div>
+
+    <button class="login-btn" onclick="checkAccess()">
+      🔓 &nbsp; アクセスする
+    </button>
+
+    <div class="login-error" id="loginError">
+      ❌ アクセスコードが正しくありません
+    </div>
+
+    <div class="login-footer">
+      アクセスコードをお持ちでない方は<br>販売元にお問い合わせください
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     MAIN APP
+=================================================== -->
+<div id="mainApp">
 <div class="container">
 
-  <!-- Header -->
   <header>
-    <div class="badge">
-      <span class="badge-dot"></span>
-      AI SNS Creator · Powered by Gemini
-    </div>
+    <div class="badge"><span class="badge-dot"></span>AI SNS Creator · Powered by Gemini</div>
     <h1>
       <span class="h1-plain">SNS投稿を</span><br>
       <span class="h1-grad">AIが自動で作成</span>
@@ -708,124 +486,70 @@
     <p class="subtitle">画像・動画をアップするだけで<br>5つのSNSに最適化した日本語記事を一括生成</p>
   </header>
 
-  <!-- API Key -->
-  <div class="card">
-    <div class="card-label">
-      <span class="card-label-icon">🔑</span>
-      Gemini API キー
-    </div>
-    <div class="api-input-wrap">
-      <input type="password" id="apiKey" class="api-input" placeholder="AIzaSy..." autocomplete="off">
-    </div>
-    <p class="api-hint">
-      無料で取得 →
-      <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio でAPIキーを発行</a>
-      （Googleアカウントがあれば即日発行可能）
-    </p>
-  </div>
-
   <!-- Media Upload -->
   <div class="card">
-    <div class="card-label">
-      <span class="card-label-icon">📁</span>
-      メディアを選択
-    </div>
-
-    <!-- Tabs -->
+    <div class="card-label"><span class="card-label-icon">📁</span>メディアを選択</div>
     <div class="tab-wrap">
       <button class="tab-btn active" id="tabImage" onclick="switchTab('image')">🖼️ 画像をアップロード</button>
       <button class="tab-btn" id="tabVideo" onclick="switchTab('video')">🎬 動画をアップロード</button>
     </div>
-
-    <!-- Upload: Image -->
-    <div class="upload-area" id="uploadArea">
-      <span class="upload-emoji">🖼️</span>
-      <div class="upload-title">画像をドラッグ＆ドロップ</div>
-      <div class="upload-sub">JPG・PNG・WEBP・GIF に対応</div>
-      <div class="upload-pill">📂 クリックして選択</div>
-      <input type="file" id="fileInput" accept="image/*">
-    </div>
-
-    <!-- Upload: Video -->
-    <div class="upload-area" id="uploadAreaVideo" style="display:none;">
-      <span class="upload-emoji">🎬</span>
-      <div class="upload-title">動画をドラッグ＆ドロップ</div>
-      <div class="upload-sub">MP4・MOV・AVI・WEBM に対応</div>
-      <div class="upload-pill">📂 クリックして選択</div>
-      <input type="file" id="fileInputVideo" accept="video/*">
-    </div>
-  </div>
-
-  <!-- Preview: Image -->
-  <div class="preview-card" id="previewContainer">
-    <div class="preview-top">
-      <span class="preview-label">📎 選択済み画像</span>
-      <button class="change-btn" id="changeBtn">変更する</button>
-    </div>
-    <img id="previewImg" src="" alt="プレビュー">
-  </div>
-
-  <!-- Preview: Video -->
-  <div class="preview-card" id="videoPreviewContainer">
-    <div class="preview-top">
-      <span class="preview-label">🎬 選択済み動画</span>
-      <button class="change-btn" id="changeBtnVideo">変更する</button>
-    </div>
-    <video id="previewVideo" controls preload="metadata"></video>
-    <div class="video-status-bar" id="videoStatus">
-      ✅ 動画を選択しました。「記事を生成する」をクリックすると自動でAI解析します。
-    </div>
-    <div class="progress-wrap" id="progressWrap">
-      <div class="progress-inner" id="progressInner"></div>
+    <div class="media-wrap">
+      <div class="upload-area" id="uploadArea">
+        <span class="upload-emoji">🖼️</span>
+        <div class="upload-title">画像をドラッグ＆ドロップ</div>
+        <div class="upload-sub">JPG・PNG・WEBP・GIF に対応</div>
+        <div class="upload-pill">📂 クリックして選択</div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <div class="upload-area" id="uploadAreaVideo" style="display:none;">
+        <span class="upload-emoji">🎬</span>
+        <div class="upload-title">動画をドラッグ＆ドロップ</div>
+        <div class="upload-sub">MP4・MOV・AVI・WEBM に対応</div>
+        <div class="upload-pill">📂 クリックして選択</div>
+        <input type="file" id="fileInputVideo" accept="video/*">
+      </div>
+      <div class="preview-card" id="previewContainer">
+        <div class="preview-top">
+          <span class="preview-label">📎 選択済み画像</span>
+          <button class="change-btn" id="changeBtn">変更する</button>
+        </div>
+        <img id="previewImg" src="" alt="プレビュー">
+      </div>
+      <div class="preview-card" id="videoPreviewContainer">
+        <div class="preview-top">
+          <span class="preview-label">🎬 選択済み動画</span>
+          <button class="change-btn" id="changeBtnVideo">変更する</button>
+        </div>
+        <video id="previewVideo" controls preload="metadata"></video>
+        <div class="video-status-bar" id="videoStatus"></div>
+        <div class="progress-wrap" id="progressWrap"><div class="progress-inner" id="progressInner"></div></div>
+      </div>
     </div>
   </div>
 
-  <!-- Platform Selection -->
+  <!-- Platforms -->
   <div class="card">
     <div class="section-header">
-      <div class="card-label" style="margin-bottom:0;">
-        <span class="card-label-icon">📣</span>
-        投稿先 SNS を選択
-      </div>
+      <div class="card-label" style="margin-bottom:0;"><span class="card-label-icon">📣</span>投稿先 SNS を選択</div>
       <button class="select-all-btn" id="selectAllBtn">すべて選択</button>
     </div>
     <div class="platforms-grid">
-      <button class="platform-btn active" data-platform="instagram">
-        <div class="p-icon">📸</div>
-        <span class="p-name">Instagram</span>
-      </button>
-      <button class="platform-btn active" data-platform="tiktok">
-        <div class="p-icon">🎵</div>
-        <span class="p-name">TikTok</span>
-      </button>
-      <button class="platform-btn active" data-platform="facebook">
-        <div class="p-icon">👥</div>
-        <span class="p-name">Facebook</span>
-      </button>
-      <button class="platform-btn active" data-platform="twitter">
-        <div class="p-icon">✖️</div>
-        <span class="p-name">X</span>
-      </button>
-      <button class="platform-btn active" data-platform="threads">
-        <div class="p-icon">🧵</div>
-        <span class="p-name">Threads</span>
-      </button>
+      <button class="platform-btn active" data-platform="instagram"><div class="p-icon">📸</div><span class="p-name">Instagram</span></button>
+      <button class="platform-btn active" data-platform="tiktok"><div class="p-icon">🎵</div><span class="p-name">TikTok</span></button>
+      <button class="platform-btn active" data-platform="facebook"><div class="p-icon">👥</div><span class="p-name">Facebook</span></button>
+      <button class="platform-btn active" data-platform="twitter"><div class="p-icon">✖️</div><span class="p-name">X</span></button>
+      <button class="platform-btn active" data-platform="threads"><div class="p-icon">🧵</div><span class="p-name">Threads</span></button>
     </div>
   </div>
 
   <!-- Context -->
   <div class="card">
-    <div class="card-label">
-      <span class="card-label-icon">💬</span>
-      補足情報（任意）
-    </div>
+    <div class="card-label"><span class="card-label-icon">💬</span>補足情報（任意）</div>
     <textarea id="contextInput" class="context-textarea" placeholder="例：ホテルのラウンジで撮影した夕暮れの写真です。リゾート感を出したいです。ターゲットは30代女性。"></textarea>
   </div>
 
-  <!-- Error -->
   <div class="error-box" id="errorBox"></div>
 
-  <!-- Generate -->
   <button class="generate-btn" id="generateBtn">
     <div class="btn-inner">
       <div class="spinner" id="spinner"></div>
@@ -833,22 +557,69 @@
     </div>
   </button>
 
-  <!-- Results -->
   <div class="results-section" id="resultsSection">
-    <div class="results-heading">
-      <span>🎉</span> 生成結果
-    </div>
+    <div class="results-heading"><span>🎉</span>生成結果</div>
     <div id="resultsContainer"></div>
   </div>
 
 </div>
+</div>
+
+<button class="logout-btn" id="logoutBtn" onclick="logout()">🔒 ログアウト</button>
 
 <footer>
   <p>Powered by <strong>Google Gemini 1.5 Flash</strong> &nbsp;·&nbsp; データはブラウザ内でのみ処理されます</p>
-  <p style="margin-top:4px;">各SNSの利用規約に従ってご使用ください</p>
 </footer>
 
 <script>
+  /* =====================================================
+     ★★★ 設定エリア ★★★
+     ここを変更するだけで運用できます
+  ===================================================== */
+  const CONFIG = {
+    ACCESS_CODE: 'sns2025',           // ← アクセスコードを変更してください
+    GEMINI_API_KEY: 'YOUR_API_KEY_HERE', // ← Gemini APIキーを入力してください
+  };
+  /* ===================================================== */
+
+  // ── 認証 ──────────────────────────────────────────
+  function checkAccess() {
+    const input = document.getElementById('accessCodeInput').value.trim();
+    const error = document.getElementById('loginError');
+    if (input === CONFIG.ACCESS_CODE) {
+      sessionStorage.setItem('sns_auth', '1');
+      document.getElementById('loginScreen').classList.add('hidden');
+      const app = document.getElementById('mainApp');
+      app.classList.add('visible');
+      document.getElementById('logoutBtn').style.display = 'block';
+      error.style.display = 'none';
+    } else {
+      error.style.display = 'block';
+      document.getElementById('loginScreen').querySelector('.login-card').classList.add('shake');
+      setTimeout(() => document.getElementById('loginScreen').querySelector('.login-card').classList.remove('shake'), 400);
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem('sns_auth');
+    location.reload();
+  }
+
+  function toggleEye() {
+    const inp = document.getElementById('accessCodeInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  // セッション維持（リロード後も認証済みなら入室）
+  window.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem('sns_auth') === '1') {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.add('visible');
+      document.getElementById('logoutBtn').style.display = 'block';
+    }
+  });
+
+  // ── プラットフォーム設定 ──────────────────────────
   const PLATFORMS = {
     instagram: {
       name: 'Instagram', icon: '📸',
@@ -860,94 +631,69 @@
 - 本文：商品・場所・雰囲気を魅力的に表現（500〜800字程度）
 - 改行を多用して読みやすく
 - 最後に「#ハッシュタグ」を20〜25個（日本語＋英語ミックス、改行区切り）
-- ハッシュタグは関連性の高いものを選ぶ
 - 全体的に温かみがあり、エンゲージメントを促す表現`
     },
     tiktok: {
-      name: 'TikTok', icon: '🎵',
-      iconBg: '#010101',
-      charLimit: 150,
+      name: 'TikTok', icon: '🎵', iconBg: '#010101', charLimit: 150,
       prompt: `TikTokの投稿説明文を日本語で作成してください。
 条件：
 - 冒頭3秒で引き込む、短くてキャッチーな一言
 - 本文100〜150文字以内
 - Z世代・若者に刺さるカジュアルなトーン
 - 絵文字を効果的に使う
-- トレンドのハッシュタグを5〜8個（#fyp #viral 系も含む）
-- 動画の最初の一言として使えるようなテキスト`
+- トレンドのハッシュタグを5〜8個`
     },
     facebook: {
-      name: 'Facebook', icon: '👥',
-      iconBg: '#1877F2',
-      charLimit: 63206,
+      name: 'Facebook', icon: '👥', iconBg: '#1877F2', charLimit: 63206,
       prompt: `Facebookの投稿文を日本語で作成してください。
 条件：
 - 親しみやすく、コミュニティ感のある文体
-- 冒頭：共感を呼ぶ問いかけや体験談
 - 本文：300〜600字で詳細に説明（ストーリー性を持たせる）
 - コメントや「いいね」を促す呼びかけを入れる
-- ハッシュタグは3〜5個程度（少なめで品よく）
-- 絵文字は控えめに使用
-- 幅広い年齢層に伝わる表現`
+- ハッシュタグは3〜5個程度`
     },
     twitter: {
-      name: 'X (Twitter)', icon: '✖️',
-      iconBg: '#000000',
-      charLimit: 280,
+      name: 'X (Twitter)', icon: '✖️', iconBg: '#000000', charLimit: 280,
       prompt: `X（旧Twitter）の投稿文を日本語で作成してください。
 条件：
 - 日本語140文字以内（厳守）
 - 冒頭から強いインパクト・好奇心を刺激する言葉
-- 簡潔で鋭い表現、テンポが良い
-- ハッシュタグ1〜2個のみ（多すぎない）
-- 必要であれば絵文字1〜2個
+- ハッシュタグ1〜2個のみ
 - リツイートされやすい"刺さる"フレーズ`
     },
     threads: {
-      name: 'Threads', icon: '🧵',
-      iconBg: '#101010',
-      charLimit: 500,
+      name: 'Threads', icon: '🧵', iconBg: '#101010', charLimit: 500,
       prompt: `Threadsの投稿文を日本語で作成してください。
 条件：
-- 会話的でナチュラルなトーン（気軽に話しかける感じ）
+- 会話的でナチュラルなトーン
 - 200〜400文字程度
-- Instagramよりカジュアル、Twitterより長め
-- 読者が「続きを読みたい」「コメントしたい」と思う内容
 - 絵文字は自然に使用
-- ハッシュタグは5〜10個（Instagramより少なめ）
-- デイリーライフ感・リアリティを大切に`
+- ハッシュタグは5〜10個`
     }
   };
 
+  // ── 状態変数 ─────────────────────────────────────
   let selectedPlatforms = new Set(['instagram','tiktok','facebook','twitter','threads']);
-  let uploadedImageBase64 = null;
-  let uploadedMimeType = null;
+  let uploadedImageBase64 = null, uploadedMimeType = null;
   let currentTab = 'image';
-  let uploadedVideoFileUri = null;
-  let videoFile = null;
-  let videoFileMimeType = null;
+  let uploadedVideoFileUri = null, videoFile = null, videoFileMimeType = null;
 
+  // ── タブ ─────────────────────────────────────────
   function switchTab(tab) {
     currentTab = tab;
     document.getElementById('tabImage').classList.toggle('active', tab === 'image');
     document.getElementById('tabVideo').classList.toggle('active', tab === 'video');
-    resetImage();
-    resetVideo();
+    resetImage(); resetVideo();
     document.getElementById('uploadArea').style.display = tab === 'image' ? 'block' : 'none';
     document.getElementById('uploadAreaVideo').style.display = tab === 'video' ? 'block' : 'none';
   }
-
   function resetImage() {
-    uploadedImageBase64 = null;
-    uploadedMimeType = null;
+    uploadedImageBase64 = null; uploadedMimeType = null;
     document.getElementById('previewContainer').style.display = 'none';
     document.getElementById('fileInput').value = '';
   }
-
   function resetVideo() {
-    uploadedVideoFileUri = null;
-    videoFile = null;
-    videoFileMimeType = null;
+    uploadedVideoFileUri = null; videoFile = null; videoFileMimeType = null;
     document.getElementById('videoPreviewContainer').style.display = 'none';
     document.getElementById('previewVideo').src = '';
     document.getElementById('fileInputVideo').value = '';
@@ -956,136 +702,78 @@
     document.getElementById('progressInner').style.width = '0%';
   }
 
-  // Image upload
+  // ── 画像アップロード ──────────────────────────────
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('fileInput');
-  const previewContainer = document.getElementById('previewContainer');
-  const previewImg = document.getElementById('previewImg');
-  const changeBtn = document.getElementById('changeBtn');
-
   uploadArea.addEventListener('click', () => fileInput.click());
   uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
   uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-  uploadArea.addEventListener('drop', e => {
-    e.preventDefault(); uploadArea.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) processFile(file);
-  });
+  uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) processFile(f); });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
-  changeBtn.addEventListener('click', () => { resetImage(); uploadArea.style.display = 'block'; });
-
-  // Video upload
-  const uploadAreaVideo = document.getElementById('uploadAreaVideo');
-  const fileInputVideo = document.getElementById('fileInputVideo');
-  const videoPreviewContainer = document.getElementById('videoPreviewContainer');
-  const previewVideo = document.getElementById('previewVideo');
-  const changeBtnVideo = document.getElementById('changeBtnVideo');
-
-  uploadAreaVideo.addEventListener('click', () => fileInputVideo.click());
-  uploadAreaVideo.addEventListener('dragover', e => { e.preventDefault(); uploadAreaVideo.classList.add('dragover'); });
-  uploadAreaVideo.addEventListener('dragleave', () => uploadAreaVideo.classList.remove('dragover'));
-  uploadAreaVideo.addEventListener('drop', e => {
-    e.preventDefault(); uploadAreaVideo.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('video/')) processVideo(file);
-  });
-  fileInputVideo.addEventListener('change', e => { if (e.target.files[0]) processVideo(e.target.files[0]); });
-  changeBtnVideo.addEventListener('click', () => { resetVideo(); uploadAreaVideo.style.display = 'block'; });
+  document.getElementById('changeBtn').addEventListener('click', () => { resetImage(); uploadArea.style.display = 'block'; });
 
   function processFile(file) {
     const reader = new FileReader();
     reader.onload = e => {
-      const result = e.target.result;
-      uploadedImageBase64 = result.split(',')[1];
+      uploadedImageBase64 = e.target.result.split(',')[1];
       uploadedMimeType = file.type;
-      previewImg.src = result;
+      document.getElementById('previewImg').src = e.target.result;
       uploadArea.style.display = 'none';
-      previewContainer.style.display = 'block';
+      document.getElementById('previewContainer').style.display = 'block';
     };
     reader.readAsDataURL(file);
   }
 
+  // ── 動画アップロード ──────────────────────────────
+  const uploadAreaVideo = document.getElementById('uploadAreaVideo');
+  const fileInputVideo = document.getElementById('fileInputVideo');
+  uploadAreaVideo.addEventListener('click', () => fileInputVideo.click());
+  uploadAreaVideo.addEventListener('dragover', e => { e.preventDefault(); uploadAreaVideo.classList.add('dragover'); });
+  uploadAreaVideo.addEventListener('dragleave', () => uploadAreaVideo.classList.remove('dragover'));
+  uploadAreaVideo.addEventListener('drop', e => { e.preventDefault(); uploadAreaVideo.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('video/')) processVideo(f); });
+  fileInputVideo.addEventListener('change', e => { if (e.target.files[0]) processVideo(e.target.files[0]); });
+  document.getElementById('changeBtnVideo').addEventListener('click', () => { resetVideo(); uploadAreaVideo.style.display = 'block'; });
+
   function processVideo(file) {
-    videoFile = file;
-    videoFileMimeType = file.type || 'video/mp4';
-    uploadedVideoFileUri = null;
-    const url = URL.createObjectURL(file);
-    previewVideo.src = url;
+    videoFile = file; videoFileMimeType = file.type || 'video/mp4'; uploadedVideoFileUri = null;
+    document.getElementById('previewVideo').src = URL.createObjectURL(file);
     uploadAreaVideo.style.display = 'none';
-    videoPreviewContainer.style.display = 'block';
-    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-    document.getElementById('videoStatus').textContent =
-      `✅ 「${file.name}」(${sizeMB}MB) を選択しました。「記事を生成する」をクリックしてください。`;
-    document.getElementById('progressWrap').style.display = 'none';
-    document.getElementById('progressInner').style.width = '0%';
+    document.getElementById('videoPreviewContainer').style.display = 'block';
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    document.getElementById('videoStatus').textContent = `✅ 「${file.name}」(${mb}MB) を選択。「記事を生成する」をクリックしてください。`;
   }
 
-  async function uploadVideoToGemini(apiKey, onStatus) {
-    if (!videoFile) throw new Error('動画ファイルが選択されていません');
-    onStatus('📤 動画をGemini AIにアップロード中...');
+  async function uploadVideoToGemini(onStatus) {
+    const apiKey = CONFIG.GEMINI_API_KEY;
+    onStatus('📤 動画をAIにアップロード中...');
     document.getElementById('progressWrap').style.display = 'block';
     document.getElementById('progressInner').style.width = '10%';
-
-    const startRes = await fetch(
-      `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Upload-Protocol': 'resumable',
-          'X-Goog-Upload-Command': 'start',
-          'X-Goog-Upload-Header-Content-Length': String(videoFile.size),
-          'X-Goog-Upload-Header-Content-Type': videoFileMimeType,
-        },
-        body: JSON.stringify({ file: { display_name: videoFile.name } })
-      }
-    );
-    if (!startRes.ok) {
-      const err = await startRes.json().catch(() => ({}));
-      throw new Error(err?.error?.message || 'アップロードセッションの開始に失敗しました');
-    }
-    const uploadUrl = startRes.headers.get('X-Goog-Upload-URL');
-    if (!uploadUrl) throw new Error('アップロードURLが取得できませんでした');
-
-    document.getElementById('progressInner').style.width = '30%';
-
-    const uploadRes = await fetch(uploadUrl, {
+    const startRes = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Length': String(videoFile.size),
-        'X-Goog-Upload-Offset': '0',
-        'X-Goog-Upload-Command': 'upload, finalize',
-      },
-      body: videoFile
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Upload-Protocol': 'resumable', 'X-Goog-Upload-Command': 'start', 'X-Goog-Upload-Header-Content-Length': String(videoFile.size), 'X-Goog-Upload-Header-Content-Type': videoFileMimeType },
+      body: JSON.stringify({ file: { display_name: videoFile.name } })
     });
-    if (!uploadRes.ok) {
-      const err = await uploadRes.json().catch(() => ({}));
-      throw new Error(err?.error?.message || 'ファイルのアップロードに失敗しました');
-    }
+    if (!startRes.ok) throw new Error('アップロード開始に失敗しました');
+    const uploadUrl = startRes.headers.get('X-Goog-Upload-URL');
+    document.getElementById('progressInner').style.width = '30%';
+    const uploadRes = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Length': String(videoFile.size), 'X-Goog-Upload-Offset': '0', 'X-Goog-Upload-Command': 'upload, finalize' }, body: videoFile });
+    if (!uploadRes.ok) throw new Error('アップロードに失敗しました');
     const fileData = await uploadRes.json();
-    const fileName = fileData.file?.name;
-    const fileUri  = fileData.file?.uri;
+    const fileName = fileData.file?.name, fileUri = fileData.file?.uri;
     if (!fileName || !fileUri) throw new Error('ファイル情報の取得に失敗しました');
-
     document.getElementById('progressInner').style.width = '60%';
-    onStatus('⚙️ AIが動画を解析中です... しばらくお待ちください');
-
+    onStatus('⚙️ AIが動画を解析中... しばらくお待ちください');
     for (let i = 0; i < 40; i++) {
       await new Promise(r => setTimeout(r, 3000));
-      const stRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`);
-      if (!stRes.ok) continue;
-      const st = await stRes.json();
-      if (st.state === 'ACTIVE') {
-        document.getElementById('progressInner').style.width = '100%';
-        return fileUri;
-      }
-      if (st.state === 'FAILED') throw new Error('動画の処理に失敗しました。別の形式（MP4推奨）でお試しください。');
+      const st = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`)).json();
+      if (st.state === 'ACTIVE') { document.getElementById('progressInner').style.width = '100%'; return fileUri; }
+      if (st.state === 'FAILED') throw new Error('動画処理に失敗しました（MP4推奨）');
       document.getElementById('progressInner').style.width = Math.min(60 + i * 1.5, 95) + '%';
     }
-    throw new Error('動画の処理がタイムアウトしました（動画が長すぎる可能性があります）');
+    throw new Error('タイムアウトしました');
   }
 
-  // Platform buttons
+  // ── プラットフォーム選択 ──────────────────────────
   document.querySelectorAll('.platform-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const p = btn.dataset.platform;
@@ -1094,48 +782,39 @@
       updateSelectAllBtn();
     });
   });
-
-  const selectAllBtn = document.getElementById('selectAllBtn');
-  selectAllBtn.addEventListener('click', () => {
-    const allSelected = selectedPlatforms.size === 5;
+  document.getElementById('selectAllBtn').addEventListener('click', () => {
+    const all = selectedPlatforms.size === 5;
     document.querySelectorAll('.platform-btn').forEach(btn => {
-      if (allSelected) { selectedPlatforms.clear(); btn.classList.remove('active'); }
+      if (all) { selectedPlatforms.clear(); btn.classList.remove('active'); }
       else { selectedPlatforms.add(btn.dataset.platform); btn.classList.add('active'); }
     });
     updateSelectAllBtn();
   });
-
   function updateSelectAllBtn() {
-    selectAllBtn.textContent = selectedPlatforms.size === 5 ? 'すべて解除' : 'すべて選択';
+    document.getElementById('selectAllBtn').textContent = selectedPlatforms.size === 5 ? 'すべて解除' : 'すべて選択';
   }
 
-  // Generate
+  // ── 生成 ─────────────────────────────────────────
   const generateBtn = document.getElementById('generateBtn');
   const spinner = document.getElementById('spinner');
   const btnText = document.getElementById('btnText');
   const errorBox = document.getElementById('errorBox');
-  const resultsSection = document.getElementById('resultsSection');
-  const resultsContainer = document.getElementById('resultsContainer');
 
   generateBtn.addEventListener('click', async () => {
-    const apiKey = document.getElementById('apiKey').value.trim();
     const context = document.getElementById('contextInput').value.trim();
-
     errorBox.style.display = 'none';
-    if (!apiKey) { showError('⚠️ APIキーを入力してください。Google AI Studio（無料）で取得できます。'); return; }
+    if (!CONFIG.GEMINI_API_KEY || CONFIG.GEMINI_API_KEY === 'YOUR_API_KEY_HERE') { showError('⚠️ APIキーが設定されていません。管理者にお問い合わせください。'); return; }
     if (currentTab === 'image' && !uploadedImageBase64) { showError('⚠️ 画像をアップロードしてください。'); return; }
     if (currentTab === 'video' && !videoFile) { showError('⚠️ 動画を選択してください。'); return; }
     if (selectedPlatforms.size === 0) { showError('⚠️ SNSを1つ以上選択してください。'); return; }
 
-    generateBtn.disabled = true;
-    spinner.style.display = 'block';
-    btnText.textContent = '準備中...';
-    resultsSection.style.display = 'none';
-    resultsContainer.innerHTML = '';
+    generateBtn.disabled = true; spinner.style.display = 'block'; btnText.textContent = '準備中...';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('resultsContainer').innerHTML = '';
 
     try {
       if (currentTab === 'video') {
-        uploadedVideoFileUri = await uploadVideoToGemini(apiKey, (msg) => {
+        uploadedVideoFileUri = await uploadVideoToGemini((msg) => {
           btnText.textContent = msg;
           document.getElementById('videoStatus').textContent = msg;
         });
@@ -1144,128 +823,80 @@
       }
 
       const platformList = Array.from(selectedPlatforms);
-      const platformPrompts = platformList.map(p => {
-        const cfg = PLATFORMS[p];
-        return `\n\n--- ${cfg.name} ---\n${cfg.prompt}`;
-      }).join('');
-
+      const platformPrompts = platformList.map(p => `\n\n--- ${PLATFORMS[p].name} ---\n${PLATFORMS[p].prompt}`).join('');
       const contextPart = context ? `\n\n【補足情報】\n${context}` : '';
       const mediaLabel = currentTab === 'video' ? '動画' : '画像';
 
-      const fullPrompt = `以下の${mediaLabel}を分析して、各SNSプラットフォームに最適化された日本語の投稿文を作成してください。${contextPart}
-
-各プラットフォームの条件に従って、それぞれ独立した投稿文を作成してください。
-出力形式：各プラットフォームの区切りは「--- プラットフォーム名 ---」で囲み、その直下に投稿文のみを記載してください。${platformPrompts}
-
-重要：必ず日本語で作成し、各プラットフォームに合わせた文体・文字数を守ってください。`;
+      const fullPrompt = `以下の${mediaLabel}を分析して、各SNSプラットフォームに最適化された日本語の投稿文を作成してください。${contextPart}\n\n各プラットフォームの条件に従って独立した投稿文を作成してください。\n出力形式：「--- プラットフォーム名 ---」で区切り、直下に投稿文のみ記載。${platformPrompts}\n\n重要：必ず日本語で作成し、各プラットフォームの文体・文字数を守ってください。`;
 
       const mediaPart = uploadedVideoFileUri
         ? { file_data: { mime_type: videoFileMimeType, file_uri: uploadedVideoFileUri } }
         : { inline_data: { mime_type: uploadedMimeType, data: uploadedImageBase64 } };
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [mediaPart, { text: fullPrompt }] }],
-            generationConfig: { temperature: 0.8, maxOutputTokens: 4096 }
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err?.error?.message || 'API エラーが発生しました。');
-      }
-
-      const data = await response.json();
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [mediaPart, { text: fullPrompt }] }], generationConfig: { temperature: 0.8, maxOutputTokens: 4096 } })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'APIエラー'); }
+      const data = await res.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       if (!rawText) throw new Error('生成結果が空でした。もう一度お試しください。');
 
-      const parsed = parsePlatformResults(rawText, platformList);
-      renderResults(parsed);
-      resultsSection.style.display = 'block';
-      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const parsed = {};
+      platformList.forEach(p => {
+        const cfg = PLATFORMS[p];
+        const m = rawText.match(new RegExp(`---\\s*${cfg.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*---([\\s\\S]*?)(?=---\\s*\\w|$)`, 'i'));
+        parsed[p] = m ? m[1].trim() : rawText;
+      });
+
+      const resultsContainer = document.getElementById('resultsContainer');
+      resultsContainer.innerHTML = '';
+      Object.entries(parsed).forEach(([platform, content], idx) => {
+        const cfg = PLATFORMS[platform];
+        const isOver = content.length > cfg.charLimit;
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.style.animationDelay = `${idx * 0.04}s`;
+        const fmt = content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/#[\w\u3040-\u9FFF\u30A0-\u30FF\u4E00-\u9FFF]+/g, m => `<span class="hashtag">${m}</span>`);
+        card.innerHTML = `
+          <div class="result-header">
+            <div class="result-platform-info">
+              <div class="result-icon" style="background:${cfg.iconBg}">${cfg.icon}</div>
+              <span class="result-platform-name">${cfg.name}</span>
+            </div>
+            <div class="result-meta">
+              <span class="char-badge" style="${isOver?'color:#fca5a5;background:rgba(244,63,94,0.15);':''}">${content.length.toLocaleString()}字</span>
+              <button class="copy-btn" onclick="copyText(this,\`${content.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$')}\`)">📋 コピー</button>
+            </div>
+          </div>
+          <div class="result-body"><div class="result-text">${fmt}</div></div>`;
+        resultsContainer.appendChild(card);
+      });
+
+      document.getElementById('resultsSection').style.display = 'block';
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (err) {
       let msg = err.message;
-      if (msg.includes('API_KEY_INVALID') || msg.includes('invalid')) msg = '❌ APIキーが無効です。Google AI Studioで正しいキーを確認してください。';
-      else if (msg.includes('QUOTA') || msg.includes('quota')) msg = '❌ APIの無料利用枠を超えました。しばらく時間をおいてお試しください。';
-      else if (msg.includes('fetch') || msg.includes('network')) msg = '❌ 通信エラー。インターネット接続を確認してください。';
+      if (msg.includes('API_KEY_INVALID') || msg.includes('invalid')) msg = '❌ APIキーエラー。管理者にお問い合わせください。';
+      else if (msg.includes('QUOTA') || msg.includes('quota')) msg = '❌ 本日の利用上限に達しました。明日またお試しください。';
       showError(msg);
     } finally {
-      generateBtn.disabled = false;
-      spinner.style.display = 'none';
-      btnText.textContent = '✨　記事を生成する';
+      generateBtn.disabled = false; spinner.style.display = 'none'; btnText.textContent = '✨　記事を生成する';
       document.getElementById('progressWrap').style.display = 'none';
     }
   });
 
-  function parsePlatformResults(text, platforms) {
-    const results = {};
-    platforms.forEach(p => {
-      const cfg = PLATFORMS[p];
-      const regex = new RegExp(`---\\s*${cfg.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*---([\\s\\S]*?)(?=---\\s*\\w|$)`, 'i');
-      const match = text.match(regex);
-      results[p] = match ? match[1].trim() : text;
-    });
-    return results;
-  }
-
-  function renderResults(results) {
-    resultsContainer.innerHTML = '';
-    Object.entries(results).forEach(([platform, content], idx) => {
-      const cfg = PLATFORMS[platform];
-      const charCount = content.length;
-      const isOver = charCount > cfg.charLimit;
-      const card = document.createElement('div');
-      card.className = 'result-card';
-      card.style.animationDelay = `${idx * 0.04}s`;
-      const formattedContent = formatHashtags(content);
-      card.innerHTML = `
-        <div class="result-header">
-          <div class="result-platform-info">
-            <div class="result-icon" style="background:${cfg.iconBg}">${cfg.icon}</div>
-            <span class="result-platform-name">${cfg.name}</span>
-          </div>
-          <div class="result-meta">
-            <span class="char-badge" style="${isOver ? 'color:#be123c;background:#fff1f2;' : ''}">${charCount.toLocaleString()}字</span>
-            <button class="copy-btn" onclick="copyText(this, \`${escapeTpl(content)}\`)">📋 コピー</button>
-          </div>
-        </div>
-        <div class="result-body">
-          <div class="result-text">${formattedContent}</div>
-        </div>`;
-      resultsContainer.appendChild(card);
-    });
-  }
-
-  function formatHashtags(text) {
-    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return escaped.replace(/#[\w\u3040-\u9FFF\u30A0-\u30FF\u4E00-\u9FFF]+/g,
-      m => `<span class="hashtag">${m}</span>`);
-  }
-
-  function escapeTpl(text) {
-    return text.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$');
-  }
-
   function copyText(btn, text) {
     navigator.clipboard.writeText(text).then(() => {
-      btn.textContent = '✅ コピー済み';
-      btn.classList.add('copied');
+      btn.textContent = '✅ コピー済み'; btn.classList.add('copied');
       setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
     });
   }
-
   function showError(msg) {
-    errorBox.textContent = msg;
-    errorBox.style.display = 'block';
+    errorBox.textContent = msg; errorBox.style.display = 'block';
     errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
-
   updateSelectAllBtn();
 </script>
 </body>
